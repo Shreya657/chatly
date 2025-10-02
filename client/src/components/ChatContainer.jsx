@@ -60,6 +60,8 @@ const[menuOpen,setMenuOpen]=useState(false);
             scrollEnd.current.scrollIntoView({behavior:"smooth"})
         }
     },[messages])
+
+    
   return selectedUser? (
     <div className='h-full overflow-scroll relative backdrop-blur-lg'>
         {/* ---------header */}

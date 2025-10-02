@@ -68,7 +68,7 @@ const getMessages=asyncHandler(async(req,res)=>{
             }
         ],
          hiddenFor: { $ne: myId } // Exclude messages hidden for current user
-}).sort({ createdAt: 1 });
+}).sort({ createdAt: 1 }); // Sorts messages by creation time (ascending = oldest first).
     
     await Message.updateMany({senderId:selectedUserId,receiverId:myId},{seen:true});
     return res.status(200).json(
@@ -170,6 +170,7 @@ const chatWithAi=asyncHandler(async(req,res)=>{
     receiverId: process.env.AI_BOT_ID, // put fixed AI id in .env
     text,
   });
+  
     let aiText;
 
  try {

@@ -65,7 +65,7 @@ export const ChatProvider=({children})=>{
    const clearChat = async () => {
     const token = localStorage.getItem("token"); 
     // console.log("clear token: ",token);
-    console.log("selected user id:", selectedUser?._id);
+    // console.log("selected user id:", selectedUser?._id);
     try {
         const { data } = await axios.delete(`/api/messages/clear/${selectedUser._id}`,  {
             headers: {
@@ -133,9 +133,9 @@ export const ChatProvider=({children})=>{
 
     //fn to unsubscribe from messages
     const unsubscribeFromMessages  =async()=>{
- if(socket){
-    socket.off("newMessage");
- }
+       if(socket){
+          socket.off("newMessage");
+          }
 }
 
 
@@ -152,7 +152,7 @@ const chatAi=async(messageData)=>{
     });
 
 
-    console.log("send: ",data);
+    // console.log("send: ",data);
             if(data.success){
                 setMessages((prevMessages)=>[...prevMessages,data.data.userMsg,  data.data.aiMsg])
             }
@@ -163,6 +163,7 @@ const chatAi=async(messageData)=>{
         console.error(error.message);
     }
 }
+
  useEffect(()=>{
     subscribeToMessages();
     return ()=>unsubscribeFromMessages();
