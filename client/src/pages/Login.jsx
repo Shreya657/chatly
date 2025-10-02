@@ -37,7 +37,8 @@ const Login = () => {
     {/* w-[min(300vw,250px] */}
 
     {/* --------------------right */}
-    <form onSubmit={onSubmitHandler} action="" className='w-150 border-2 bg-white/8 text-white border-gray-500 p-6 flex flex-col gap-6 rounded-lg shadow-lg'>
+    <form onSubmit={onSubmitHandler} action="" className='w-150   max-w-md sm:w-[90%] sm:max-w-lg md:max-w-xl lg:max-w-2xl
+  border-2 bg-white/8 text-white border-gray-500 p-6 flex flex-col gap-6 rounded-lg shadow-lg'>
     <h2 className='font-medium text-2xl flex justify-between items-center'>{currState}
       {isDataSubmitted &&
           <img onClick={()=>setIsDataSubmitted(false)} src="./vite.svg" alt="" className='w-5 cursor-pointer ' />
