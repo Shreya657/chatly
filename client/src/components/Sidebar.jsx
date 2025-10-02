@@ -28,7 +28,7 @@ const[input,setInput]=useState("");
             <img src="./vite.svg" alt="logo" className='max-w-40' />
             <div className='relative py-2 group'>
                 <img  src="https://imgs.search.brave.com/XB5sf7IYUsahp2F0CIB6GXnYYxaxEHOhAtJsMraRwC4/rs:fit:0:180:1:0/g:ce/aHR0cHM6Ly9jZG4u/aWNvbnNjb3V0LmNv/bS9pY29uL3ByZW1p/dW0vcG5nLTI1Ni10/aHVtYi9lbGxpcHNp/cy1pY29uLXN2Zy1w/bmctZG93bmxvYWQt/ODI3OTc0OC5wbmc_/Zj13ZWJwJnc9MTI4" alt="menu" onClick={()=>setOpen(!open)} className='max-h-5 cursor-pointer' />
-             {setOpen &&  (  <div className='absolute top-full right-0 z-20 w-32 p-5 rounded-md bg-[#282142] border-gray-600 text-gray-100 hidden group-hover:block'>
+             {open &&  (  <div className='absolute top-full right-0 z-20 w-32 p-5 rounded-md bg-[#282142] border-gray-600 text-gray-100 '>
                     <p onClick={()=>navigate('/profile')} className='cursor-pointer text-sm'>Edit profile</p>
                     <hr  className='my-2 border-t border-gray-500'/>
                     <p onClick={()=>logout()} className='cursor-pointer text-sm'>Logout</p>
