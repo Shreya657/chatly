@@ -61,7 +61,7 @@ export const AuthProvider=({children})=>{
             setToken(token);
             localStorage.setItem("token",token);
             // console.log("User logged in:", data.data);
-            toast.success(data.message);
+            toast.success(`${state} successfully`);
         }else{
             toast.error(data.message);
         }
