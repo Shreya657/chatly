@@ -17,11 +17,12 @@ const RightSidebar = () => {
       messages.filter(msg =>msg.image).map(msg=>msg.image)
     )
   },[messages])
-  
+
   return( selectedUser&& (selectedUser?._id !== import.meta.env.VITE_AI_BOT_ID)  && (
-    <div className={`bg-[#8185B2]/10 text-white w-full relative overflow-y-scroll ${selectedUser? "max-md:hidden":""}`}>
+    <div className={`bg-[#8185B2]/10 text-white   w-full sm:w-[300px] md:w-[350px] 
+h-[calc(100vh-10px)] md:h-full  relative overflow-scroll ${selectedUser? "":"hidden"}`}>
       <div className='pt-16 flex flex-col items-center gap-2 text-xs font-light mx-auto'>
-        <img onClick={()=>window.open(selectedUser?.profilePic || './vite.svg')} src={selectedUser?.profilePic || './vite.svg'} alt="" className='w-20 aspect-[1/1] rounded-full' />
+        <img onClick={()=>window.open(selectedUser?.profilePic || './vite.svg')} src={selectedUser?.profilePic || './vite.svg'}  alt="" className='w-20 aspect-[1/1] rounded-full' />
         <h1 className='px-10 text-xl font-medium mx-auto  flex items-center gap-2'>
          {onlineUsers.includes(selectedUser._id) &&  <p className='w-2 h-2 rounded-full bg-green-500'></p>}
           {selectedUser.fullName}

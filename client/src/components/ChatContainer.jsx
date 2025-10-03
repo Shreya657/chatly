@@ -3,6 +3,8 @@ import { messagesDummyData } from '../assets/assets'
 import { formatDate } from '../lib/utils'
 import { ChatContext } from '../../context/ChatContext'
 import { AuthContext } from '../../context/AuthContext'
+import { useNavigate } from 'react-router-dom'
+
 import toast from 'react-hot-toast'
 
 const ChatContainer = () => {
@@ -13,6 +15,18 @@ const[menuOpen,setMenuOpen]=useState(false);
 
     const scrollEnd = useRef()
 
+    const navigate = useNavigate();
+    // ... your states and context
+  
+    const handleProfileClick = () => {
+      if (window.innerWidth < 768) { 
+        // mobile breakpoint (Tailwind md = 768px)
+        navigate("/rightSidebar");
+      } else {
+        // desktop → maybe open image in new tab like before
+        window.open(selectedUser?.profilePic || "./vite.svg");
+      }
+    };
 
     const [input,setInput]=useState('');
 
@@ -56,34 +70,48 @@ const[menuOpen,setMenuOpen]=useState(false);
     },[selectedUser])
 
     useEffect(()=>{
-        if(scrollEnd.current && messages){
-            scrollEnd.current.scrollIntoView({behavior:"smooth"})
+        if(scrollEnd.current && messages && (window.innerWidth >= 768)){
+          scrollEnd.current?.scrollIntoView({ behavior: 'smooth'});
+
         }
     },[messages])
 
     
   return selectedUser? (
-    <div className='h-full overflow-scroll relative backdrop-blur-lg'>
+    <div className=' max-md:h-[calc(100vh-10px)] h-screen md:h-full overflow-scroll relative backdrop-blur-lg'>
         {/* ---------header */}
         <div className='flex items-center gap-3 py-3 mx-4 border-b border-stone-500'>
-            <img  src={selectedUser.profilePic || "./vite.svg"} alt="profilepic"  className='w-8 rounded-full'/>
+            <img    onClick={handleProfileClick}     src={selectedUser.profilePic || "./vite.svg"} alt="profilepic"  className='w-8 rounded-full'/>
             <p className='flex-1 text-lg text-white flex items-center gap-2'>{selectedUser.fullName}
            {onlineUsers.includes(selectedUser._id) &&     <span className='w-2 h-2 rounded-full bg-green-500'></span>}
             </p>
             <img onClick={()=>setSelectedUser(null)} src='./vite.svg' alt="" className='md:hidden max-w-7' />
             <div>
            
-            <img onClick={() => setMenuOpen(!menuOpen)} src="https://imgs.search.brave.com/tXIQpiSY89u8Q8Wca_q_3T4cxZxpYzrs0Vu48MqdVjM/rs:fit:0:180:1:0/g:ce/aHR0cHM6Ly9jZG4t/aWNvbnMtcG5nLmZs/YXRpY29uLmNvbS8x/MjgvMzc0OC8zNzQ4/NzkzLnBuZw"  alt="" className='max-md:hidden max-w-5' />
+            <img onClick={() => setMenuOpen(!menuOpen)} src="https://imgs.search.brave.com/tXIQpiSY89u8Q8Wca_q_3T4cxZxpYzrs0Vu48MqdVjM/rs:fit:0:180:1:0/g:ce/aHR0cHM6Ly9jZG4t/aWNvbnMtcG5nLmZs/YXRpY29uLmNvbS8x/MjgvMzc0OC8zNzQ4/NzkzLnBuZw"  alt="" className=' max-w-5' />
                   {menuOpen && (
-    <div className="absolute right-0 top-6 bg-gray-800 p-2 rounded shadow">
-      <button
+    <div className="absolute right-0 top-12 bg-white p-2 rounded shadow">
+      {/* <button
         onClick={clearChat}
         className="text-white text-sm px-2 py-1 hover:bg-gray-700 rounded"
       >
         Clear Chat
-      </button>
+      </button> */}
+
+<p onClick={()=>setSelectedUser(null)} className='cursor-pointer text-sm'>go back</p>
+                    <hr  className='my-2 border-t border-gray-500'/>
+                    <p  onClick={clearChat} className='cursor-pointer text-sm'>clear chat</p>
     </div>
   )}
+
+
+{/* {menuOpen &&  (  <div className='absolute top-full right-0 z-20 w-32 p-5 rounded-md bg-[#282142] border-gray-600 text-gray-100 '>
+                    <p onClick={()=>setSelectedUser(null)} className='cursor-pointer text-sm'>go back</p>
+                    <hr  className='my-2 border-t border-gray-500'/>
+                    <p  onClick={clearChat} className='cursor-pointer text-sm'>clear chat</p>
+             
+                </div>
+)} */}
             </div>
         </div>
         {/* ------------chat area */}
