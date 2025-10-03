@@ -91,16 +91,11 @@ const[menuOpen,setMenuOpen]=useState(false);
             <img onClick={() => setMenuOpen(!menuOpen)} src="https://imgs.search.brave.com/tXIQpiSY89u8Q8Wca_q_3T4cxZxpYzrs0Vu48MqdVjM/rs:fit:0:180:1:0/g:ce/aHR0cHM6Ly9jZG4t/aWNvbnMtcG5nLmZs/YXRpY29uLmNvbS8x/MjgvMzc0OC8zNzQ4/NzkzLnBuZw"  alt="" className=' max-w-5' />
                   {menuOpen && (
     <div className="absolute right-0 top-12 bg-white p-2 rounded shadow">
-      {/* <button
-        onClick={clearChat}
-        className="text-white text-sm px-2 py-1 hover:bg-gray-700 rounded"
-      >
-        Clear Chat
-      </button> */}
+     
 
-<p onClick={()=>setSelectedUser(null)} className='cursor-pointer text-sm'>go back</p>
+<p onClick={()=>{setSelectedUser(null);   setMenuOpen(false)} }  className='cursor-pointer text-sm'>go back</p>
                     <hr  className='my-2 border-t border-gray-500'/>
-                    <p  onClick={clearChat} className='cursor-pointer text-sm'>clear chat</p>
+                    <p  onClick={()=>{clearChat(); setMenuOpen(false)}} className='cursor-pointer text-sm'>clear chat</p>
     </div>
   )}
 
