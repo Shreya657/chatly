@@ -69,7 +69,7 @@ npm install
 ```bash
 # Start the backend server
 cd server
-npm run dev
+node server.js
 
 # Start the frontend (in a new terminal)
 cd ../client
