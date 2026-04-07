@@ -27,7 +27,7 @@ h-[calc(100vh-10px)] md:h-full  relative overflow-scroll ${selectedUser? "":"hid
          {onlineUsers.includes(selectedUser._id) &&  <p className='w-2 h-2 rounded-full bg-green-500'></p>}
           {selectedUser.fullName}
           </h1>
-          <p className='px-10 mx-auto'>{selectedUser?.bio || "hey there,Im using chat app"}</p>
+          <p className='px-10 mx-auto'>{selectedUser?.bio || "hey there,Im using Chatly"}</p>
       </div>
 
       <hr className='border-[#ffffff50] my-4'/>

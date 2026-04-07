@@ -63,6 +63,26 @@ app.use("/api/auth",userRouer);
 app.use("/api/messages",messageRouter);
 
 
+
+//  THE ERROR MIDDLEWARE  
+app.use((err, req, res, next) => {
+    // determine status code and message from ApiError class
+    const statusCode = err.statusCode || 500;
+    const message = err.message || "Internal Server Error";
+
+    console.error(`[API Error] ${statusCode} - ${message}`);
+
+    // sends the JSON that Axios is looking for
+    res.status(statusCode).json({
+        success: false,
+        message: message,
+        stack: process.env.NODE_ENV === "development" ? err.stack : null,
+    });
+});
+
+
+
+
 //connect to database
 connectDB();
 
