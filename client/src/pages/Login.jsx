@@ -90,7 +90,7 @@ const Login = () => {
                   value={fullName} 
                   type="text" 
                   className='w-full p-4 pl-12 bg-white/[0.03] border border-white/5 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 text-white placeholder:text-slate-600 transition-all'
-                  placeholder='Shreya Das' 
+                  placeholder='Your Name' 
                   required 
                 />
               </div>

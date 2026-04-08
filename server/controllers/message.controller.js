@@ -5,17 +5,18 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { io,userSocketMap } from "../server.js";
 import User from "../models/user.model.js";
-import OpenAI from "openai";
+import Groq from "groq-sdk";
 
 
 
 
 
-
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+// initialize groq 
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY,
 });
+
+
 
 
 //get all users except logged in user
@@ -156,51 +157,62 @@ const clearChat = asyncHandler(async (req, res) => {
 });
 
 
+
+
 //chat with ai
-const chatWithAi=asyncHandler(async(req,res)=>{
-    const userId=req.user._id;
-    const {text}=req.body;
-      if (!text) {
+const chatWithAi = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  const { text } = req.body;
+
+  if (!text) {
     throw new ApiError(400, "Message text is required");
   }
 
-    // save user's message
+  // 1. Save user's message to DB
   const userMsg = await Message.create({
     senderId: userId,
-    receiverId: process.env.AI_BOT_ID, // put fixed AI id in .env
+    receiverId: process.env.AI_BOT_ID,
     text,
   });
-  
-    let aiText;
 
- try {
-      // call OpenAI
-     const response = await openai.chat.completions.create({
-       model: "gpt-4o-mini",
-       messages: [
-         { role: "system", content: "You are a helpful AI assistant inside a chat app." },
-         { role: "user", content: text },
-       ],
-     });
-   
-        aiText = response.choices[0].message.content;
- } catch (error) {
-     console.log("OpenAI failed, using mock reply:", err.message);
-  aiText = `AI says: I can't answer right now, but you said "${text}"`;
- }
+  let aiText;
 
-      // save AI reply
+  try {
+    // call groq api to get res
+    const chatCompletion = await groq.chat.completions.create({
+      messages: [
+        {
+          role: "system",
+          content: "You are a helpful AI assistant named Chatly AI. Keep responses concise and friendly.",
+        },
+        {
+          role: "user",
+          content: text,
+        },
+      ],
+      model: "llama-3.3-70b-versatile", // This model is incredibly fast and smart
+    });
+
+    aiText = chatCompletion.choices[0]?.message?.content || "I'm sorry, I couldn't generate a response.";
+    
+  } catch (error) {
+    console.error("Groq API Error:", error.message);
+    // fallback: if api fails, we still want to save smt
+    aiText = "I'm currently experiencing a high load. Let's try again in a moment!";
+  }
+
+  // save  reply to db
   const aiMsg = await Message.create({
     senderId: process.env.AI_BOT_ID,
     receiverId: userId,
     text: aiText,
   });
 
-    return res.status(200).json(
+  // return both msgs
+  return res.status(200).json(
     new ApiResponse(200, { userMsg, aiMsg }, "AI replied successfully")
   );
-
-})
+});
 
 
 

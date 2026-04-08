@@ -1,170 +1,188 @@
-import React, { useContext, useEffect, useRef, useState } from 'react'
-import { messagesDummyData } from '../assets/assets'
-import { formatDate } from '../lib/utils'
-import { ChatContext } from '../../context/ChatContext'
-import { AuthContext } from '../../context/AuthContext'
-import { useNavigate } from 'react-router-dom'
-
-import toast from 'react-hot-toast'
+import React, { useContext, useEffect, useRef, useState } from 'react';
+import { formatDate } from '../lib/utils';
+import { ChatContext } from '../../context/ChatContext';
+import { AuthContext } from '../../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import { 
+  Bot, 
+  Send, 
+  Image as ImageIcon, 
+  MoreVertical, 
+  ChevronLeft, 
+  Trash2, 
+  XCircle,
+  Sparkles
+} from 'lucide-react';
 
 const ChatContainer = () => {
-    const { messages,selectedUser,setSelectedUser,sendMessage,setMessages,getMessages,clearChat,chatAi}=useContext(ChatContext)
-    const {authUser,onlineUsers }=useContext(AuthContext)
-const[menuOpen,setMenuOpen]=useState(false);
-
-
-    const scrollEnd = useRef()
-
-    const navigate = useNavigate();
-    // ... your states and context
+  const { messages, selectedUser, setSelectedUser, sendMessage, getMessages, clearChat, chatAi } = useContext(ChatContext);
+  const { authUser, onlineUsers } = useContext(AuthContext);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [input, setInput] = useState('');
   
-    const handleProfileClick = () => {
-      if (window.innerWidth < 768) { 
-        // mobile breakpoint (Tailwind md = 768px)
-        navigate("/rightSidebar");
-      } else {
-        // desktop → maybe open image in new tab like before
-        window.open(selectedUser?.profilePic || "./vite.svg");
-      }
-    };
+  const scrollEnd = useRef();
+  const navigate = useNavigate();
+  const isAi = selectedUser?._id === import.meta.env.VITE_AI_BOT_ID;
 
-    const [input,setInput]=useState('');
-
-
-    //handle sending a message
-    const handleSendMessage=async(e)=>{
-        e.preventDefault();
-          if (input.trim() === "") return null;
-      if (selectedUser._id === import.meta.env.VITE_AI_BOT_ID) {
-    await chatAi({ text: input.trim() });
-  } else {
-    await sendMessage({ text: input.trim() });
-  }
-        setInput("");
-    }
-
-   
-
-
-    //handle sending an image
-    const handleSendImage=async(e)=>{
-        const file=e.target.files[0];
-        if(!file || !file.type.startsWith("image/")){
-            toast.error("select an image file")
-            return;
-        }
-        const reader=new FileReader();
-        reader.onloadend=async()=>{
-            await sendMessage({image:reader.result});
-            e.target.value=""
-        }
-        reader.readAsDataURL(file)
-    }
-
-
-
-    useEffect(()=>{
-        if(selectedUser){
-            getMessages(selectedUser._id)
-        }
-    },[selectedUser])
-
-    useEffect(()=>{
-        if(scrollEnd.current && messages && (window.innerWidth >= 768)){
-          scrollEnd.current?.scrollIntoView({ behavior: 'smooth'});
-
-        }
-    },[messages])
-
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
+    if (input.trim() === "") return;
+    const text = input.trim();
+    setInput(""); 
     
-  return selectedUser? (
-    <div className=' max-md:h-[calc(100vh-10px)] h-screen md:h-full overflow-scroll relative backdrop-blur-lg'>
-        {/* ---------header */}
-        <div className='flex items-center gap-3 py-3 mx-4 border-b border-stone-500'>
-            <img    onClick={handleProfileClick}     src={selectedUser.profilePic || "./vite.svg"} alt="profilepic"  className='w-8 rounded-full'/>
-            <p className='flex-1 text-lg text-white flex items-center gap-2'>{selectedUser.fullName}
-           {onlineUsers.includes(selectedUser._id) &&     <span className='w-2 h-2 rounded-full bg-green-500'></span>}
+    if (isAi) {
+      await chatAi({ text });
+    } else {
+      await sendMessage({ text });
+    }
+  };
+
+  const handleSendImage = async (e) => {
+    const file = e.target.files[0];
+    if (!file || !file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      await sendMessage({ image: reader.result });
+      e.target.value = "";
+    };
+    reader.readAsDataURL(file);
+  };
+
+  useEffect(() => {
+    if (selectedUser) getMessages(selectedUser._id);
+  }, [selectedUser]);
+
+  useEffect(() => {
+    if (scrollEnd.current) {
+      scrollEnd.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
+
+  if (!selectedUser) {
+    return (
+      <div className='flex-1 flex flex-col items-center justify-center gap-4 bg-white/[0.01] max-md:hidden'>
+        <div className='p-6 bg-emerald-500/10 rounded-full border border-emerald-500/20 animate-bounce'>
+          <Bot className='w-12 h-12 text-emerald-400' />
+        </div>
+        <p className='text-xl text-slate-300 font-medium tracking-tight'>Select a conversation to start chatting</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className='flex-1 flex flex-col h-full relative overflow-hidden bg-transparent'>
+      
+      <div className='flex items-center justify-between px-6 py-4 border-b border-white/5 backdrop-blur-md z-10'>
+        <div className='flex items-center gap-3'>
+          <button onClick={() => setSelectedUser(null)} className='md:hidden p-1 text-slate-400'>
+            <ChevronLeft />
+          </button>
+          <div className='relative'>
+            <img src={selectedUser.profilePic || "/vite.svg"} alt="" className='w-10 h-10 rounded-full object-cover border border-white/10' />
+            {onlineUsers.includes(selectedUser._id) && (
+              <span className='absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-[#0a0f1e] rounded-full' />
+            )}
+          </div>
+          <div>
+            <h3 className='text-white font-semibold text-sm md:text-base flex items-center gap-2'>
+              {selectedUser.fullName}
+              {isAi && <Sparkles className='w-3 h-3 text-emerald-400' />}
+            </h3>
+            <p className='text-[10px] md:text-xs text-slate-500 uppercase tracking-widest'>
+              {onlineUsers.includes(selectedUser._id) || isAi ? 'Active Now' : 'Offline'}
             </p>
-            <img onClick={()=>setSelectedUser(null)} src='./vite.svg' alt="" className='md:hidden max-w-7' />
-            <div>
-           
-            <img onClick={() => setMenuOpen(!menuOpen)} src="https://imgs.search.brave.com/tXIQpiSY89u8Q8Wca_q_3T4cxZxpYzrs0Vu48MqdVjM/rs:fit:0:180:1:0/g:ce/aHR0cHM6Ly9jZG4t/aWNvbnMtcG5nLmZs/YXRpY29uLmNvbS8x/MjgvMzc0OC8zNzQ4/NzkzLnBuZw"  alt="" className=' max-w-5' />
-                  {menuOpen && (
-    <div className="absolute right-0 top-12 bg-white p-2 rounded shadow">
-     
+          </div>
+        </div>
 
-<p onClick={()=>{setSelectedUser(null);   setMenuOpen(false)} }  className='cursor-pointer text-sm'>go back</p>
-                    <hr  className='my-2 border-t border-gray-500'/>
-                    <p  onClick={()=>{clearChat(); setMenuOpen(false)}} className='cursor-pointer text-sm'>clear chat</p>
-    </div>
-  )}
-
-
-{/* {menuOpen &&  (  <div className='absolute top-full right-0 z-20 w-32 p-5 rounded-md bg-[#282142] border-gray-600 text-gray-100 '>
-                    <p onClick={()=>setSelectedUser(null)} className='cursor-pointer text-sm'>go back</p>
-                    <hr  className='my-2 border-t border-gray-500'/>
-                    <p  onClick={clearChat} className='cursor-pointer text-sm'>clear chat</p>
-             
-                </div>
-)} */}
+        <div className='relative'>
+          <button onClick={() => setMenuOpen(!menuOpen)} className='p-2 text-slate-400 hover:text-white transition-colors'>
+            <MoreVertical className='w-5 h-5' />
+          </button>
+          
+          {menuOpen && (
+            <div className='absolute right-0 top-full mt-2 w-48 bg-[#0f172a] border border-white/10 rounded-xl shadow-2xl z-50 p-2 animate-in fade-in zoom-in-95'>
+              <button onClick={() => { setSelectedUser(null); setMenuOpen(false); }} className='w-full flex items-center gap-2 p-2.5 text-sm text-slate-300 hover:bg-white/5 rounded-lg'>
+                <XCircle className='w-4 h-4' /> Close Chat
+              </button>
+              <div className='my-1 border-t border-white/5' />
+              <button onClick={() => { clearChat(); setMenuOpen(false); }} className='w-full flex items-center gap-2 p-2.5 text-sm text-red-400 hover:bg-red-400/10 rounded-lg'>
+                <Trash2 className='w-4 h-4' /> Clear Conversation
+              </button>
             </div>
+          )}
         </div>
-        {/* ------------chat area */}
-        <div className='flex flex-col h-[calc(100%-120px)] overflow-y-scroll p-3 pb-6'>
-            {messages.map((msg,index)=>(
-                <div key={index} className={`flex items-end gap-2 justify-end ${msg.senderId!==authUser._id && 'flex-row-reverse'}`}>
-                    {msg.image ?(
-                        <img src={msg.image} alt="message" className='max-w-[230px] border border-gray-700 rounded-lg overflow-hidden mb-8' />
-                    ):(
-                        <p className={`p-2 max-w-[200px] md:text-sm font-light rounded-lg mb-8 break-all bg-violet-500/30 text-white ${msg.senderId===authUser._id ? 'rounded-br-none':'rounded-bl-none'}`} >{msg.text}</p>
+      </div>
 
-                    )}
+      {/* MESSAGES AREA  */}
+      <div className='flex-1 overflow-y-auto p-4 md:p-6 space-y-6 custom-scrollbar'>
+        {messages.map((msg, index) => {
+          const isMe = msg.senderId === authUser._id;
+          return (
+            <div key={index} className={`flex ${isMe ? 'justify-end' : 'justify-start'} items-end gap-2`}>
+              {!isMe && (
+                <img src={selectedUser.profilePic || "/vite.svg"} className='w-6 h-6 rounded-full mb-1 opacity-60' alt="" />
+              )}
+              
+              <div className={`max-w-[75%] md:max-w-[60%] flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
+                {msg.image ? (
+                  <img src={msg.image} alt="Sent" className='rounded-2xl border border-white/10 shadow-2xl max-w-full' />
+                ) : (
+                  <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed shadow-lg ${
+                    isMe 
+                    ? 'bg-gradient-to-br from-emerald-500 to-cyan-600 text-white rounded-tr-none' 
+                    : 'bg-white/5 border border-white/10 text-slate-200 rounded-tl-none'
+                  }`}>
+                    {msg.text}
+                  </div>
+                )}
+                <span className='text-[9px] text-slate-500 mt-1 px-1'>{formatDate(msg.createdAt)}</span>
+              </div>
 
-                    <div className='text-center text-xs'>
-                        <img src={msg.senderId===authUser._id ? authUser?.profilePic || "./vite.svg"  : selectedUser?.profilePic || 'https://pbs.twimg.com/media/G1YCqAlWAAATCnx?format=jpg&name=large'} alt="" className='w-7 rounded-full' />
-                        <p className='text-gray-400'>{ formatDate(msg.createdAt)}</p>
-                    </div>
-
-                    </div>
-            ))}
-            <div ref={scrollEnd}></div>
-        </div>
-
-        {/* ---------input area */}
-        <div className='absolute bottom-0 left-0 right-0 p-3 gap-3  flex items-center'>
-            <div className='flex-1 flex items-center bg-gray-100/12 px-3 rounded-full'>
-               <input onChange={(e)=>setInput(e.target.value)} value={input} onKeyDown={(e)=>e.key==="Enter" ? handleSendMessage(e): null} type="text" placeholder='send a message' className='flex-1 text-sm p-3 border-none rounded-lg outline-none text-white placeholder-gray-400'  /> 
-               <input onChange={handleSendImage} type="file" id='image' accept='image/png, image/svg' hidden />
-                {   (selectedUser._id !== import.meta.env.VITE_AI_BOT_ID) && <label htmlFor="image" >
-              <img src="https://imgs.search.brave.com/fMJtsjKsXEw2TPfTpXyhfVFWsRQUM3vRzke3cFIAqGc/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly90aHVt/YnMuZHJlYW1zdGlt/ZS5jb20vYi9jYW1l/cmEtaWNvbi1waG90/by1jYW1lcmEtaWNv/bi1jYW1lcmEtaWNv/bi1waG90by1jYW1l/cmEtaWNvbi12ZWN0/b3ItMzc1NDUxOTIz/LmpwZw" alt="" className='w-5 mr-2 cursor-pointer' />
-                </label>}
+              {isMe && (
+                <img src={authUser.profilePic || "/vite.svg"} className='w-6 h-6 rounded-full mb-1 opacity-60' alt="" />
+              )}
             </div>
-    <svg
-  onClick={handleSendMessage}
-  xmlns="http://www.w3.org/2000/svg"
-  fill="white"
-  viewBox="0 0 24 24"
-  strokeWidth={1.5}
-  stroke="black"
-  className="w-7 h-7 cursor-pointer"
->
-  <path
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5"
-  />
-</svg>
+          );
+        })}
+        <div ref={scrollEnd} />
+      </div>
 
-
+      {/* INPUT AREA  */}
+      <form onSubmit={handleSendMessage} className='p-4 md:p-6 bg-transparent'>
+        <div className='flex items-center gap-2 bg-white/5 border border-white/10 rounded-2xl p-2 focus-within:ring-1 focus-within:ring-emerald-500/40 transition-all shadow-inner'>
+          <input 
+            type="text" 
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder={isAi ? 'Ask Chatly AI anything...' : 'Message...'}
+            className='flex-1 bg-transparent border-none text-white p-2 text-sm focus:outline-none placeholder:text-slate-600'
+          />
+          
+          <div className='flex items-center gap-1'>
+            {!isAi && (
+              <>
+                <input onChange={handleSendImage} type="file" id='image' accept='image/*' hidden />
+                <label htmlFor="image" className='p-2 text-slate-500 hover:text-emerald-400 cursor-pointer transition-colors'>
+                  <ImageIcon className='w-5 h-5' />
+                </label>
+              </>
+            )}
+            <button 
+              type="submit"
+              disabled={!input.trim()}
+              className='p-2.5 bg-emerald-500 text-white rounded-xl hover:bg-emerald-400 disabled:opacity-30 disabled:hover:bg-emerald-500 transition-all shadow-lg shadow-emerald-500/20'
+            >
+              <Send className='w-4 h-4' />
+            </button>
+          </div>
         </div>
+      </form>
     </div>
-  ):
-  (
-    <div className='flex flex-col items-center justify-center gap-2 text-gray-500 bg-white/10 max-md:hidden'>
-        <img src="./vite.svg" alt="" className='w-20' />
-        <p className='text-lg  text-while font-bold'>chat anytime,anywhere</p>
-    </div>
-  )
-}
+  );
+};
 
-export default ChatContainer
+export default ChatContainer;

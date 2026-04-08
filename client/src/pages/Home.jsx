@@ -8,17 +8,28 @@ const Home = () => {
     const{selectedUser}=useContext(ChatContext)
 
     
-  return (
-    <div className='border w-full h-screen sm:px-[15%] sm:py-[5%]'>
+ return (
+  <div className='w-full h-screen sm:px-[10%] sm:py-[5%] bg-[#0a0f1e] overflow-hidden'>
+    
+    <div className='flex w-full h-full backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden relative'>
       
-<div className={`backdrop-blur-xl border-2 border-gray-600 rounded-2xl overflow-hidden h-[100%] grid grid-cols-1 relative   ${selectedUser ? 'md:grid-cols-[1fr_1.5fr_1fr] xl:grid-cols-[1fr_2fr_1fr]' : 'md:grid-cols-2'}`}>
-    <Sidebar />
-    <ChatContainer />
-    <RightSidebar />
-</div>
+      <div className={`${selectedUser ? "hidden md:flex" : "flex"} w-full md:w-[320px] flex-shrink-0 h-full`}>
+        <Sidebar />
+      </div>
+
+      <div className={`${!selectedUser ? "hidden md:flex" : "flex"} flex-1 h-full bg-white/[0.01]`}>
+        <ChatContainer />
+      </div>
+
+     {selectedUser && selectedUser._id !== import.meta.env.VITE_AI_BOT_ID && (
+    <div className='hidden xl:flex w-[300px] ...'>
+      <RightSidebar />
+    </div>
+  )}
 
     </div>
-  )
+  </div>
+);
 }
 
 export default Home
