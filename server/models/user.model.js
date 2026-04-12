@@ -21,8 +21,12 @@ const userSchema=new mongoose.Schema({
     },
     bio:{
                     type:String,
-                    default:"Hey there! I am using Chat App"
-    }
+                    default:"Hey there! I am using Chatly"
+    },
+         lastSeen: {
+  type: Date,
+  default: Date.now
+} ,
 },{timestamps:true})
 
 const User=mongoose.model("User",userSchema);

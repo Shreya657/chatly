@@ -5,46 +5,113 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { io,userSocketMap } from "../server.js";
 import User from "../models/user.model.js";
-import OpenAI from "openai";
+import Groq from "groq-sdk";
 
 
 
 
 
-
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+// initialize groq 
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY,
 });
+
+
 
 
 //get all users except logged in user
-const getUsersForSidebar=asyncHandler(async(req,res)=>{
-const userId=req.user._id;
-const filteredUsers=await User.find({_id:{$ne:userId}}).select("-password").sort({fullName:1});
-if(!filteredUsers){
-    throw new ApiError(404,"No users found")
-}
+// const getUsersForSidebar=asyncHandler(async(req,res)=>{
+// const userId=req.user._id;
+// const filteredUsers=await User.find({_id:{$ne:userId}}).select("-password").sort({fullName:1});
+// if(!filteredUsers){
+//     throw new ApiError(404,"No users found")
+// }
 
-//count no of msgs not seen
-const unseenMessages={};
-const promises=filteredUsers.map(async(user)=>{
-    const messages=await Message.find({
-        senderId:user._id,
-        receiverId:userId,
-        seen:false
-    });
-    if(messages.length>0){
-        unseenMessages[user._id]=messages.length;
-    }
-});
+// //count no of msgs not seen
+// const unseenMessages={};
+// const promises=filteredUsers.map(async(user)=>{
+//     const messages=await Message.find({
+//         senderId:user._id,
+//         receiverId:userId,
+//         seen:false
+//     });
+//     if(messages.length>0){
+//         unseenMessages[user._id]=messages.length;
+//     }
+// });
 
-await Promise.all(promises);
-return res.status(200).json(
-    new ApiResponse(200, { data: filteredUsers, unseenMessages },"Users fetched successfully")
-);
+// await Promise.all(promises);
+// return res.status(200).json(
+//     new ApiResponse(200, { data: filteredUsers, unseenMessages },"Users fetched successfully")
+// );
    
 
+
+// });
+
+
+
+const getUsersForSidebar = asyncHandler(async (req, res) => {
+  const myId = req.user._id;
+
+  const usersWithLastMsg = await User.aggregate([
+    // 1. find all users except me
+    { $match: { _id: { $ne: myId } } },
+    
+    // 2. look up the latest message between me and this user
+    {
+      $lookup: {
+        from: "messages",  // search in the 'messages' collection
+        let: { userId: "$_id" },  // create a variable 'userId' from the user's ID
+        pipeline: [                  // run a separate mini-search inside messages
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $or: [
+                    // find messages where (I am sender and they are receiver) OR (They are sender and I am receiver)
+                    { $and: [{ $eq: ["$senderId", "$$userId"] }, { $eq: ["$receiverId", myId] }] },
+                    { $and: [{ $eq: ["$senderId", myId] }, { $eq: ["$receiverId", "$$userId"] }] }
+                  ]},
+                  // don't count messages  deleted/hid
+                  { $not: { $in: [myId, "$hiddenFor"] } }
+                ]
+              }
+            }
+          },
+          { $sort: { createdAt: -1 } }, // Sort these messages: newest first
+          { $limit: 1 }   // We only care about the single MOST RECENT message
+        ],
+        as: "lastMessage"  // Put that result into a new field called 'lastMessage'
+      }
+    },
+    
+    // unwind the lastMessage array to a single object
+    // $lookup always returns an array
+    // preserveNullAndEmptyArrays: true ensures that if you've never talked to someone, they don't disappear from the sidebar.
+    { $unwind: { path: "$lastMessage", preserveNullAndEmptyArrays: true } },
+
+    // sort by lastMessage timestamp (newest first), then by online status/name
+    { $sort: { "lastMessage.createdAt": -1, fullName: 1 } },
+
+    // hide passwords
+    { $project: { password: 0 } }
+  ]);
+
+  // count unseen messages 
+  const unseenCounts = await Message.aggregate([
+    { $match: { receiverId: myId, seen: false } },
+    { $group: { _id: "$senderId", count: { $sum: 1 } } }
+  ]);
+
+  const unseenMessages = {};
+  unseenCounts.forEach(item => {
+    unseenMessages[item._id] = item.count;
+  });
+
+  return res.status(200).json(
+    new ApiResponse(200, { data: usersWithLastMsg, unseenMessages }, "Users sorted by recency")
+  );
 });
 
 
@@ -70,7 +137,16 @@ const getMessages=asyncHandler(async(req,res)=>{
          hiddenFor: { $ne: myId } // Exclude messages hidden for current user
 }).sort({ createdAt: 1 }); // Sorts messages by creation time (ascending = oldest first).
     
-    await Message.updateMany({senderId:selectedUserId,receiverId:myId},{seen:true});
+    // await Message.updateMany({senderId:selectedUserId,receiverId:myId},{seen:true});
+
+    // Inside getMessages controller
+await Message.updateMany({ senderId: selectedUserId, receiverId: myId, seen: false }, { seen: true });
+
+// notify the sender that their messages were just read
+const senderSocketId = userSocketMap[selectedUserId];
+if (senderSocketId) {
+    io.to(senderSocketId).emit("messagesSeen", { seenBy: myId });
+}
     return res.status(200).json(
         new ApiResponse(200,messages,"Messages fetched successfully")
     )
@@ -156,51 +232,68 @@ const clearChat = asyncHandler(async (req, res) => {
 });
 
 
+
+
 //chat with ai
-const chatWithAi=asyncHandler(async(req,res)=>{
-    const userId=req.user._id;
-    const {text}=req.body;
-      if (!text) {
+const chatWithAi = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  const { text } = req.body;
+
+  if (!text) {
     throw new ApiError(400, "Message text is required");
   }
 
-    // save user's message
+  // 1. Save user's message to DB
   const userMsg = await Message.create({
     senderId: userId,
-    receiverId: process.env.AI_BOT_ID, // put fixed AI id in .env
+    receiverId: process.env.AI_BOT_ID,
     text,
   });
-  
-    let aiText;
 
- try {
-      // call OpenAI
-     const response = await openai.chat.completions.create({
-       model: "gpt-4o-mini",
-       messages: [
-         { role: "system", content: "You are a helpful AI assistant inside a chat app." },
-         { role: "user", content: text },
-       ],
-     });
-   
-        aiText = response.choices[0].message.content;
- } catch (error) {
-     console.log("OpenAI failed, using mock reply:", err.message);
-  aiText = `AI says: I can't answer right now, but you said "${text}"`;
- }
+  let aiText;
+  const today = new Date().toLocaleDateString('en-US', { 
+  weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
+});
 
-      // save AI reply
+  try {
+    // call groq api to get res
+    const chatCompletion = await groq.chat.completions.create({
+      messages: [
+        {
+          role: "system",
+          content: `You are Chatly AI, a helpful assistant. 
+              The current date is ${today}. 
+              If the user asks about the date or year, use this information. 
+              Keep your tone friendly and your answers concise.`,
+        },
+        {
+          role: "user",
+          content: text,
+        },
+      ],
+      model: "meta-llama/llama-4-scout-17b-16e-instruct", // This model is incredibly fast and smart
+    });
+
+    aiText = chatCompletion.choices[0]?.message?.content || "I'm sorry, I couldn't generate a response.";
+    
+  } catch (error) {
+    console.error("Groq API Error:", error.message);
+    // fallback: if api fails, we still want to save smt
+    aiText = "I'm currently experiencing a high load. Let's try again in a moment!";
+  }
+
+  // save  reply to db
   const aiMsg = await Message.create({
     senderId: process.env.AI_BOT_ID,
     receiverId: userId,
     text: aiText,
   });
 
-    return res.status(200).json(
+  // return both msgs
+  return res.status(200).json(
     new ApiResponse(200, { userMsg, aiMsg }, "AI replied successfully")
   );
-
-})
+});
 
 
 

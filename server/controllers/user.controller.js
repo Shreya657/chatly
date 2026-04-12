@@ -45,10 +45,29 @@ import bcrypt from "bcryptjs";
     const token=generateToken(newUser._id);
     
     return res.status(201).json(
-        new ApiResponse(200,newUser,"user registered successfully",token)
+        new ApiResponse(200,newUser,token,"user registered successfully")
     )
 })
 
+
+//to check email availability during signup, so that frontend can show appropriate message to user
+ const checkEmailAvailability = asyncHandler(async (req, res) => {
+    const { email } = req.body;
+
+    if (!email) {
+        throw new ApiError(400, "Email is required");
+    }
+
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+        
+        throw new ApiError(409, "Account already exists with this email. Please login.");
+    }
+
+    return res.status(200).json(
+        new ApiResponse(200, null, "Email is available")
+    );
+});
 
 
 //login user
@@ -127,4 +146,4 @@ return res.status(200).json(
 
 
 
-export{signup,login,checkAuth,updateProfile}
+export{signup,login,checkAuth,updateProfile,checkEmailAvailability}

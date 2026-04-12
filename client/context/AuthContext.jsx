@@ -66,7 +66,11 @@ export const AuthProvider=({children})=>{
             toast.error(data.message);
         }
     }catch(error){
-        toast.error(error.message);
+        // toast.error(error.message);
+              // console.log("Error Response Object:", error.response);
+
+         const errorMsg = error.response?.data?.message || "Something went wrong";
+      toast.error(errorMsg);
     }
  }
 

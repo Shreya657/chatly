@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { AuthContext } from "./AuthContext";
 import toast from "react-hot-toast";
+// import { set } from "mongoose";
 
 export const ChatContext=createContext();
 
@@ -9,6 +10,7 @@ export const ChatProvider=({children})=>{
     const[users,setUsers]=useState([]);
     const[selectedUser,setSelectedUser]=useState(null);
     const[unseenMessages,setUnseenMessages]=useState({});
+    const [typingUser, setTypingUser] = useState(null); // track who is typing
 
 
     const {socket,axios}=useContext(AuthContext);
@@ -111,32 +113,59 @@ export const ChatProvider=({children})=>{
     }
 
 
-    //fn to subscribe to message for selected user
-    const subscribeToMessages=async()=>{
-        if(!socket){
-            return;
-        }
-        socket.on("newMessage",(newMessage)=>{
-            if(selectedUser && newMessage.senderId===selectedUser._id){
-                newMessage.seen=true;
-                setMessages((prevMessages)=>[...prevMessages,newMessage]);
-                axios.put(`/api/messages/mark/${newMessage._id}`);
-            }else{
-                setUnseenMessages((prevUnseenMessages)=>({
-                    ...prevUnseenMessages,[newMessage.senderId]: prevUnseenMessages[newMessage.senderId]?prevUnseenMessages[newMessage.senderId]+1:1
-                }))
-            }
 
-        })
+const subscribeToMessages = () => {
+  if (!socket) return;
+
+  socket.on("newMessage", (newMessage) => {
+    if (selectedUser && newMessage.senderId === selectedUser._id) {
+      newMessage.seen = true;
+      setMessages((prev) => [...prev, newMessage]);
+      // mark as seen on backend
+      axios.put(`/api/messages/mark/${newMessage._id}`, {}, {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+      });
+      // inform the sender that I've seen it
+      socket.emit("markMessagesSeen", { senderId: selectedUser._id });
+    } else {
+      setUnseenMessages((prev) => ({
+        ...prev,
+        [newMessage.senderId]: (prev[newMessage.senderId] || 0) + 1,
+      }));
     }
+  });
 
+  //  Listen for seen updates from the other person 
+  socket.on("messagesSeen", ({ seenBy }) => {
+    if (selectedUser && seenBy === selectedUser._id) {
+      setMessages((prev) =>
+        prev.map((msg) => (msg.receiverId === seenBy ? { ...msg, seen: true } : msg))
+      );
+    }
+  });
 
-    //fn to unsubscribe from messages
-    const unsubscribeFromMessages  =async()=>{
-       if(socket){
-          socket.off("newMessage");
-          }
-}
+  // listen for typing status 
+  socket.on("userTyping", ({ senderId }) => {
+    if (selectedUser && senderId === selectedUser._id) {
+      setTypingUser(senderId);
+    }
+  });
+
+  socket.on("userStoppedTyping", ({ senderId }) => {
+    if (selectedUser && senderId === selectedUser._id) {
+      setTypingUser(null);
+    }
+  });
+};
+
+const unsubscribeFromMessages = () => {
+  if (socket) {
+    socket.off("newMessage");
+    socket.off("messagesSeen");
+    socket.off("userTyping");
+    socket.off("userStoppedTyping");
+  }
+};
 
 
 
@@ -164,6 +193,7 @@ const chatAi=async(messageData)=>{
     }
 }
 
+
  useEffect(()=>{
     subscribeToMessages();
     return ()=>unsubscribeFromMessages();
@@ -184,7 +214,9 @@ const chatAi=async(messageData)=>{
         setUnseenMessages,
         getMessages,
         clearChat,
-        chatAi
+        chatAi,
+        typingUser,
+        setTypingUser
 
         
        
