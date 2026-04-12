@@ -45,7 +45,7 @@ import bcrypt from "bcryptjs";
     const token=generateToken(newUser._id);
     
     return res.status(201).json(
-        new ApiResponse(200,newUser,"user registered successfully",token)
+        new ApiResponse(200,newUser,token,"user registered successfully")
     )
 })
 

@@ -2,24 +2,25 @@ import React, { useContext, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AuthContext } from '../../context/AuthContext';
 import { ChatContext } from '../../context/ChatContext';
+import { formatDate } from '../lib/utils'; 
 import { 
   MessageSquareText, 
   MoreVertical, 
   Search, 
   LogOut, 
   UserCircle, 
-  Sparkles,
-  
+  Sparkles 
 } from 'lucide-react';
 
 const Sidebar = () => {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   
-  const { getUsers, users, selectedUser, setSelectedUser, unseenMessages, setUnseenMessages } = useContext(ChatContext);
+  const { getUsers, users, selectedUser, setSelectedUser, unseenMessages, setUnseenMessages, typingUser } = useContext(ChatContext);
   const { logout, onlineUsers } = useContext(AuthContext);
   const navigate = useNavigate();
 
+  // Filtered users based on search input
   const filteredUsers = input 
     ? users.filter((user) => user.fullName.toLowerCase().includes(input.toLowerCase())) 
     : users;
@@ -31,6 +32,7 @@ const Sidebar = () => {
   return (
     <div className={`bg-white/[0.03] backdrop-blur-xl h-full p-5 border-r border-white/10 flex flex-col transition-all duration-300 ${selectedUser ? "max-md:hidden" : "w-full md:w-80"}`}>
       
+      {/* HEADER */}
       <div className='flex justify-between items-center mb-6'>
         <div className='flex items-center gap-2'>
           <div className='p-2 bg-emerald-500/20 rounded-lg'>
@@ -78,13 +80,13 @@ const Sidebar = () => {
         />
       </div>
 
-      {/* AI  BUTTON */}
+      {/* AI BUTTON */}
       <button
-       onClick={() => setSelectedUser({ 
-    _id: import.meta.env.VITE_AI_BOT_ID, 
-    fullName: "Chatly AI", 
-    profilePic: "https://api.dicebear.com/7.x/bottts-neutral/svg?seed=Chatly&backgroundColor=059669,0891b2" 
-})}
+        onClick={() => setSelectedUser({ 
+          _id: import.meta.env.VITE_AI_BOT_ID, 
+          fullName: "Chatly AI", 
+          profilePic: "https://api.dicebear.com/7.x/bottts-neutral/svg?seed=Chatly&backgroundColor=059669,0891b2" 
+        })}
         className={`flex items-center justify-center gap-2 w-full py-3 mb-6 rounded-xl font-medium transition-all active:scale-95 shadow-lg ${
           selectedUser?._id === import.meta.env.VITE_AI_BOT_ID 
           ? 'bg-emerald-500 text-white shadow-emerald-500/20' 
@@ -97,9 +99,10 @@ const Sidebar = () => {
 
       {/* USER LIST */}
       <div className='flex-1 flex flex-col gap-1 overflow-y-auto pr-2 custom-scrollbar'>
-        {filteredUsers.map((user, index) => {
-          const isOnline = (onlineUsers || []).includes(user._id);
+        {filteredUsers.map((user) => {
+          const isOnline = onlineUsers.includes(user._id);
           const isSelected = selectedUser?._id === user._id;
+          const isTyping = typingUser === user._id;
 
           return (
             <div 
@@ -107,20 +110,20 @@ const Sidebar = () => {
                 setSelectedUser(user); 
                 setUnseenMessages(prev => ({ ...prev, [user._id]: 0 }));
               }} 
-              key={index} 
+              key={user._id} 
               className={`group relative flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all ${
                 isSelected ? 'bg-white/10 border border-white/10' : 'hover:bg-white/5'
               }`}
             >
-              {/* Profile Pic & Online Indicator */}
-              <div className='relative'>
+              {/* Profiles */}
+              <div className='relative flex-shrink-0'>
                 <img 
-                  src={user?.profilePic || "https://imgs.search.brave.com/XLM6WQZOOjg4USteTMmA56CbGwKhBGOcLHTpbDno-xU/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9tZWRp/YS5pc3RvY2twaG90/by5jb20vaWQvMjE3/MTM4MjYzMy92ZWN0/b3IvdXNlci1wcm9m/aWxlLWljb24tYW5v/bnltb3VzLXBlcnNv/bi1zeW1ib2wtYmxh/bmstYXZhdGFyLWdy/YXBoaWMtdmVjdG9y/LWlsbHVzdHJhdGlv/bi5qcGc_cz02MTJ4/NjEyJnc9MCZrPTIw/JmM9WndPRjZOZk9S/MHpoWUM0NHhPWDA2/cnlJUEFVaER2QWFq/clBzYVo2djEtdz0"} 
+                  src={user?.profilePic || "https://api.dicebear.com/7.x/initials/svg?seed=" + user.fullName} 
                   alt={user.fullName} 
                   className={`w-11 h-11 rounded-full object-cover border-2 ${isSelected ? 'border-emerald-500/50' : 'border-transparent'}`}
                 />
                 {isOnline && (
-                  <div className='absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-[#0f172a] rounded-full' />
+                  <div className='absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-[#0f172a] rounded-full shadow-sm' />
                 )}
               </div>
 
@@ -129,14 +132,17 @@ const Sidebar = () => {
                 <p className={`font-medium truncate ${isSelected ? 'text-white' : 'text-slate-200'}`}>
                   {user.fullName}
                 </p>
-                <p className={`text-xs ${isOnline ? 'text-emerald-400' : 'text-slate-500'}`}>
-                  {isOnline ? 'online' : 'offline'}
+                
+                <p className={`text-[10px] md:text-xs font-medium transition-all duration-300 truncate ${
+                  isTyping ? 'text-emerald-400 animate-pulse' : isOnline ? 'text-emerald-500/70' : 'text-slate-500'
+                }`}>
+                  {isTyping ? 'typing...' : isOnline ? 'online' : (user.lastSeen ? `last seen ${formatDate(user.lastSeen)}` : 'offline')}
                 </p>
               </div>
 
-              {/* Unseen Counter */}
+              {/* Unseen  */}
               {unseenMessages[user._id] > 0 && (
-                <div className='bg-emerald-500 text-white text-[10px] font-bold h-5 w-5 flex justify-center items-center rounded-full shadow-lg animate-bounce'>
+                <div className='bg-emerald-500 text-white text-[10px] font-bold h-5 w-5 flex justify-center items-center rounded-full shadow-lg animate-bounce flex-shrink-0'>
                   {unseenMessages[user._id]}
                 </div>
               )}
@@ -145,7 +151,7 @@ const Sidebar = () => {
         })}
       </div>
     </div>
-  )
+  );
 }
 
 export default Sidebar;
